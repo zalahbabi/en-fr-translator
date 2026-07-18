@@ -86,3 +86,4 @@ Your public link: `https://huggingface.co/spaces/<your-username>/<space-name>`
 - **Model fails to load**: the TF version in `requirements.txt` must match the Colab training version (printed by `save_for_deployment.py`).
 - **Out of memory on free tiers**: `tensorflow-cpu` + 1 gunicorn worker keeps RAM low; the model itself is small.
 - **Health check**: `GET /health` returns `{"status": "ok"}` — useful for Render health checks.
+# en-fr-translator
