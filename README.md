@@ -11,7 +11,6 @@ A web app that translates simple English sentences into French using a sequence-
 with **Docker**, and deployed on **Google Cloud Run**.
 
 **Live demo:** https://en-fr-translator-297513110687.us-central1.run.app
-*(first request after idle takes ~30–60 s while the container wakes up — free tier scales to zero)*
 
 ## Preview
 
