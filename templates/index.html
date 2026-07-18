@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EN → FR Translator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #fff; border-radius: 16px; padding: 40px;
+      max-width: 640px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    h1 { color: #1e3a5f; font-size: 1.6rem; margin-bottom: 6px; }
+    p.sub { color: #667; margin-bottom: 24px; font-size: .95rem; }
+    textarea {
+      width: 100%; padding: 14px; font-size: 1rem; border: 2px solid #d5dde5;
+      border-radius: 10px; resize: vertical; min-height: 90px; font-family: inherit;
+    }
+    textarea:focus { outline: none; border-color: #2d5a87; }
+    button {
+      margin-top: 14px; width: 100%; padding: 14px; font-size: 1.05rem;
+      background: #2d5a87; color: #fff; border: none; border-radius: 10px;
+      cursor: pointer; font-weight: 600;
+    }
+    button:hover { background: #1e3a5f; }
+    .result {
+      margin-top: 24px; padding: 18px; background: #eef5fb;
+      border-left: 4px solid #2d5a87; border-radius: 8px;
+    }
+    .result .label { font-size: .8rem; text-transform: uppercase; color: #2d5a87;
+      font-weight: 700; letter-spacing: .05em; margin-bottom: 6px; }
+    .result .text { font-size: 1.15rem; color: #1e3a5f; }
+    .warn { margin-top: 12px; padding: 12px; background: #fff6e5;
+      border-left: 4px solid #e6a23c; border-radius: 8px; font-size: .9rem; color: #7a5c1e; }
+    .error { margin-top: 12px; padding: 12px; background: #fdeaea;
+      border-left: 4px solid #d9534f; border-radius: 8px; font-size: .9rem; color: #8a2c2a; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🇬🇧 English → French Translator 🇫🇷</h1>
+    <p class="sub">Seq2seq Bidirectional-GRU model · type an English sentence below</p>
+
+    <form method="POST">
+      <textarea name="sentence" placeholder="e.g. paris is never freezing during winter , but it is wonderful in spring .">{{ sentence }}</textarea>
+      <button type="submit">Translate</button>
+    </form>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% if translation %}
+      <div class="result">
+        <div class="label">French translation</div>
+        <div class="text">{{ translation }}</div>
+      </div>
+    {% endif %}
+
+    {% if unknown %}
+      <div class="warn">
+        ⚠️ Not in training vocabulary (skipped): {{ unknown | join(', ') }}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
