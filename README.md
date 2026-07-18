@@ -1,90 +1,90 @@
-# EN → FR Translator — Flask + Docker Deployment
+# English → French Neural Machine Translation — Flask + Docker + Google Cloud Run
 
-Deployment of the Week 8 machine translation model (Embedding + Bidirectional GRU seq2seq).
+A web app that translates simple English sentences to French using a sequence-to-sequence
+Bidirectional GRU model built with TensorFlow/Keras, served with Flask, containerized with
+Docker, and deployed on Google Cloud Run.
+
+**Live demo:** https://en-fr-translator-297513110687.us-central1.run.app
+*(first request after idle takes ~30–60 s while the container wakes up)*
+
+**Repository:** https://github.com/zalahbabi/en-fr-translator
+
+## Model
+
+Trained on the ZAKA AI EN/FR parallel corpus (137,860 aligned sentence pairs; small
+vocabulary of ~227 English / ~354 French words covering weather, months, fruits, animals).
+
+Architecture:
+
+```
+Embedding (256) → Bidirectional GRU (256) → RepeatVector (23)
+→ Bidirectional GRU (256, return_sequences) → TimeDistributed Dense (softmax)
+```
+
+Trained 10 epochs, sparse categorical cross-entropy, Adam — **~95% validation accuracy**.
+Input and output sentences are padded to 23 tokens. Words outside the training vocabulary
+are skipped and flagged to the user in the UI.
 
 ## Project structure
 
 ```
-translator-deployment/
-├── app.py                  # Flask app
+.
+├── app.py                  # Flask app: loads model + tokenizers, serves UI and /health
 ├── templates/
-│   └── index.html          # Web UI
-├── model/                  # ← YOU add these (from save_for_deployment.py)
-│   ├── translator.keras
+│   └── index.html          # Web interface
+├── model/
+│   ├── translator.keras    # Trained seq2seq model
 │   ├── english_tokenizer.pkl
 │   └── french_tokenizer.pkl
 ├── requirements.txt
 ├── Dockerfile
-├── .dockerignore
-└── save_for_deployment.py  # Run in the Colab notebook, not in Docker
+└── save_for_deployment.py  # Run in the training notebook to export model/ files
 ```
 
-## Step 1 — Export the model from Colab
-
-1. Open `Week_8.ipynb`, run all cells through training.
-2. Paste the contents of `save_for_deployment.py` in a new cell and run it. It downloads `model.zip`.
-3. Note the printed TensorFlow version and update `tensorflow-cpu==...` in `requirements.txt` to match.
-4. Unzip `model.zip` and place the `model/` folder inside this project as shown above.
-
-## Step 2 — Run locally (no Docker, quick test)
+## Run locally
 
 ```bash
-cd translator-deployment
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
+# open http://localhost:7860
 ```
 
-Open http://localhost:7860
-
-## Step 3 — Run with Docker
+## Run with Docker
 
 ```bash
 docker build -t en-fr-translator .
 docker run -p 7860:7860 en-fr-translator
+# open http://localhost:7860
 ```
 
-Open http://localhost:7860
+Note for Apple Silicon: `tensorflow-cpu` has no Linux arm64 wheels. To build locally on
+an M-series Mac, either swap `tensorflow-cpu` for `tensorflow` in requirements.txt, or
+build with `docker build --platform linux/amd64 ...`. Cloud builds (x86_64) are unaffected.
 
-## Step 4 — Deploy online
-
-### Option A: Hugging Face Spaces (recommended, free, Docker-native)
-
-1. Create a Space at https://huggingface.co/new-space → SDK: **Docker** → Blank.
-2. Push this whole folder (including `model/`) to the Space repo:
+## Deploy to Google Cloud Run
 
 ```bash
-git clone https://huggingface.co/spaces/<your-username>/<space-name>
-cp -r translator-deployment/* <space-name>/
-cd <space-name>
-git add .
-git commit -m "Deploy EN-FR translator"
-git push
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud run deploy en-fr-translator \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --timeout 300
 ```
 
-3. If the model file is >10 MB, track it with Git LFS first:
+Cloud Build builds the Dockerfile remotely and prints the public Service URL when done.
+The Dockerfile binds gunicorn to `$PORT`, which Cloud Run injects automatically.
 
-```bash
-git lfs install
-git lfs track "*.keras" "*.pkl"
-git add .gitattributes
-```
+## API
 
-The Space builds the Dockerfile automatically and serves on port 7860.
-Your public link: `https://huggingface.co/spaces/<your-username>/<space-name>`
+- `GET /` — web UI
+- `POST /` — form field `sentence`, returns the rendered translation
+- `GET /health` — returns `{"status": "ok"}` (liveness check)
 
-### Option B: Render
+## Known limitations
 
-1. Push the project to a GitHub repo (use Git LFS for the model if >100 MB).
-2. On https://render.com → New → Web Service → connect the repo.
-3. Runtime: **Docker**. Render injects `$PORT` automatically — the Dockerfile handles it.
-4. Free instance works but cold-starts; first request may take ~1 min.
-
-## Notes / troubleshooting
-
-- **Model fails to load**: the TF version in `requirements.txt` must match the Colab training version (printed by `save_for_deployment.py`).
-- **Out of memory on free tiers**: `tensorflow-cpu` + 1 gunicorn worker keeps RAM low; the model itself is small.
-- **Health check**: `GET /health` returns `{"status": "ok"}` — useful for Render health checks.
-# en-fr-translator
-# en-fr-translator
+- Vocabulary is limited to the training corpus (~227 English words); unknown words are skipped.
+- Rare sentence patterns (e.g. animal sentences) may borrow phrasing from more frequent
+  patterns in the training data.
+- Improvements: attention mechanism, more epochs, BLEU evaluation, Transformer architecture.
